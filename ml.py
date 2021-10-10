@@ -18,6 +18,7 @@ def stat(name, y, y_pred, n=0):
     print("\tPrc:{} ".format(metrics.precision_score(y, y_pred)), end='')
     print("\tRec:{} ".format(metrics.recall_score(y, y_pred)), end='')
     print("\tF1s:{} ".format(metrics.f1_score(y, y_pred)))
+    return metrics.accuracy_score(y, y_pred), metrics.precision_score(y, y_pred), metrics.recall_score(y, y_pred), metrics.f1_score(y, y_pred)
 
 
 def model_exec(name, X_tr, y_tr, X_te, y_te, model):
@@ -27,10 +28,10 @@ def model_exec(name, X_tr, y_tr, X_te, y_te, model):
     middle = time.time()
     y_pred = model.predict(X_te)
     stat_pipe.append((name, y_te, y_pred))
-    stat(name, y_te, y_pred)
+    acc, pre, rec, f1 = stat(name, y_te, y_pred)
     end = time.time()
     print("{}: tr {:.4f}s, te {:.4f}s".format(name,middle-start, end-middle))
-
+    return acc, pre, rec, f1
 
 #Statistic Analisys
 def calculate_statistical_features(exp_list):
@@ -91,6 +92,30 @@ def separate_training_validation(exp_list):
   return X, X_val, y, y_val
 
 
+#Separate for cross validation
+def separate_cross_validation(exp_list):  
+  train = []
+  label = []
+  random.seed(10)
+  random.shuffle(exp_list)
+  ta = time.time()
+  file_list_len = len(exp_list)
+  for ind, exp in enumerate(exp_list):
+      print("\r{}/{}/{:2f}s".format(ind, file_list_len, time.time()-ta), end='', flush=True)
+      ge = exp["metrics"]["ge"]
+      le = exp["metrics"]["le"]
+      mod = exp["metrics"]["mod"]
+      bc = exp["metrics"]["bc"]
+      bc_avg = exp["metrics"]["bc_avg"]
+      cs = exp["metrics"]["cs"]
+      cs_avg = exp["metrics"]["cs_avg"]
+      cls = exp['class'] #1 if exp['class']=="1" else -1
+      train.append([ge, le, mod, bc, cs, bc_avg, cs_avg])
+      label.append(int(cls))
+          
+  return train, label
+
+
 def get_safe_value(value):
   if (math.isnan(value)):
     return 0
@@ -99,9 +124,11 @@ def get_safe_value(value):
 
 
 #Execute ML models
-def execute_ml_models(X, y, X_val, y_val):  
-  stat_pipe = []
-  model_exec("Log Reg",X, y, X_val, y_val, LogisticRegression(max_iter = 500))
+def execute_logreg_model(X, y, X_val, y_val):  
+  return model_exec("Log Reg",X, y, X_val, y_val, LogisticRegression(max_iter = 500))
+
+#Execute ML models
+def execute_svm_model(X, y, X_val, y_val):  
   hyperparams = {'C': 100, 'gamma': 0.1, 'kernel': 'rbf'}
   svm_model = svm.SVC(C=hyperparams['C'], gamma=hyperparams['gamma'], kernel=hyperparams['kernel'])
-  model_exec("SVM Class",X, y, X_val, y_val, svm_model)
+  return model_exec("SVM Class",X, y, X_val, y_val, svm_model)

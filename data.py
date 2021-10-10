@@ -57,11 +57,8 @@ def calculate_pearson_correlation(df_atlas):
 
 
 def calculate_pearson_fisher_correlation(df_atlas):
-  thresh = 0.21
   corr = np.corrcoef(df_atlas.T)
   fisher = np.arctanh(corr)
-  fisher[fisher > thresh]=1
-  fisher[fisher <= thresh]=0
 
   return fisher
 
@@ -90,7 +87,7 @@ def convert_matrix_to_igraph(correlation_matrix):
   return g.subgraph_edges(edges)
 
 
-def convert_matrix_to_networkx(correlation_matrix, correlation):
+def convert_matrix_to_networkx(correlation_matrix, correlation, thresh, binarize_coef):
   if (correlation == "Pearson Correlation"):
     aux_g = nx.from_numpy_matrix(correlation_matrix)
     g = aux_g.copy()
@@ -98,10 +95,12 @@ def convert_matrix_to_networkx(correlation_matrix, correlation):
       if (float(a['weight']) == 1):
         g.remove_edge(u, v)
 
-      if (float(a['weight']) < 0.3):
+      if (float(a['weight']) < binarize_coef):
         g.remove_edge(u, v)
     return g
   elif (correlation == "Pearson Correlation and Fisher Normalization"):
+    correlation_matrix[correlation_matrix > thresh]=1
+    correlation_matrix[correlation_matrix <= thresh]=0
     g = nx.from_numpy_matrix(correlation_matrix)
     return g
   else:
@@ -125,7 +124,7 @@ def nodal_eff(g):
 
 
 #Generate example instance for each ROI in path folder
-def generate_examples_list(folder_path, atlas_id, correlation):
+def generate_examples_list(folder_path, atlas_id, correlation, thresh, binarize_coef):
   example_list = []
   file_list = os.listdir(folder_path)
   file_list_len = len(file_list)
@@ -143,7 +142,7 @@ def generate_examples_list(folder_path, atlas_id, correlation):
     else:
         #Partial Correlation
         correlation_matrix = {}
-    graph = convert_matrix_to_networkx(correlation_matrix, correlation)
+    graph = convert_matrix_to_networkx(correlation_matrix, correlation, thresh, binarize_coef)
     experiment = {"id": dt[2], "class": dt[1], 'exp': dt[0], 'graph': graph}
     example_list.append(experiment)
   return example_list
