@@ -17,6 +17,7 @@ binarize_coef_list = [0.1, 0.3, 0.5, 0.7]
 
 ### ATLAS CROSS VALIDATION FISHER
 res.write('Validación cruzada { atlas_id, fisher }: \n')
+res.write('\n')
 for atlas_id in atlas_id_list:
 
     #fixed params
@@ -67,6 +68,7 @@ for atlas_id in atlas_id_list:
 
 ### ATLAS CROSS VALIDATION PEARSON
 res.write('Validación cruzada { atlas_id, pearson }: \n')
+res.write('\n')
 for atlas_id in atlas_id_list:
 
     #fixed params
@@ -118,6 +120,7 @@ for atlas_id in atlas_id_list:
 
 ### BINARIZE PEARSON COEF CROSS VALIDATION
 res.write('Validación cruzada { binarize_coef }: \n')
+res.write('\n')
 for binarize_coef in binarize_coef_list:
 
     #fixed params
@@ -169,6 +172,7 @@ for binarize_coef in binarize_coef_list:
 
 ### THRESH CROSS VALIDATION
 res.write('Validación cruzada { thresh }: \n')
+res.write('\n')
 for thresh in thresh_list:
 
     #fixed params
