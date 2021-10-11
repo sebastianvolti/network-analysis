@@ -4,7 +4,6 @@ from constants import atlas_switcher, correlation_switcher
 from data import generate_examples_list
 from ml import calculate_statistical_features, separate_cross_validation, execute_logreg_model, execute_svm_model
 
-
 res=open('res-cross-validation.txt','w')
 
 #define config params

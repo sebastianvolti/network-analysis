@@ -9,6 +9,7 @@ import networkx as nx
 import stellargraph as sg
 import pandas as pd
 import sys
+import random
 
 
 #load rois files from drive
