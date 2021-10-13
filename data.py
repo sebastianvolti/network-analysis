@@ -19,6 +19,14 @@ def load_roi(file_name):
   df_rois = pd.DataFrame(data)
   return df_rois
 
+#extract global signal from roi dataframe
+def select_global_signal(df_rois):
+  selected_atlas = atlas_switcher.get(7, "Invalid Atlas")
+  atlas_start_range = selected_atlas["start_range"]
+  atlas_end_range = selected_atlas["end_range"]
+  atlas_range = range(atlas_start_range, atlas_end_range)
+  df_atlas = df_rois[atlas_range]
+  return df_atlas
 
 #extract atlas from roi dataframe
 def select_atlas(df_rois, atlas_index):
@@ -135,6 +143,8 @@ def generate_examples_list(folder_path, atlas_id, correlation, thresh, binarize_
     file_path = folder_path + file_name
     df_rois = load_roi(file_path)
     df_atlas = select_atlas(df_rois, atlas_id)
+    global_signal = select_global_signal(df_rois)
+    global_signal_avg = np.average(global_signal)
     selected_correlation = correlation_switcher.get(correlation, "Invalid Correlation")
     if (correlation == "Pearson Correlation"):
         correlation_matrix = calculate_pearson_correlation(df_atlas)
@@ -144,6 +154,6 @@ def generate_examples_list(folder_path, atlas_id, correlation, thresh, binarize_
         #Partial Correlation
         correlation_matrix = {}
     graph = convert_matrix_to_networkx(correlation_matrix, correlation, thresh, binarize_coef)
-    experiment = {"id": dt[2], "class": dt[1], 'exp': dt[0], 'graph': graph}
+    experiment = {"id": dt[2], "class": dt[1], 'exp': dt[0], 'graph': graph, 'gs': global_signal_avg}
     example_list.append(experiment)
   return example_list

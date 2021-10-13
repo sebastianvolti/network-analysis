@@ -52,6 +52,7 @@ def calculate_statistical_features(exp_list):
           cs_values = nx.clustering(exp["graph"])
           exp["metrics"]["cs"] =  get_safe_value(max(cs_values, key=cs_values.get))
           exp["metrics"]["cs_avg"] = get_safe_value(round(np.average(list(cs_values.values())), 5))
+          exp["metrics"]["gs_avg"] = exp["gs"]
           try:
               c = nx_comm.greedy_modularity_communities(exp["graph"])
               exp["metrics"]["mod"] = get_safe_value(round(nx_comm.modularity(exp["graph"], c), 5))
@@ -81,12 +82,13 @@ def separate_training_validation(exp_list):
       bc_avg = exp["metrics"]["bc_avg"]
       cs = exp["metrics"]["cs"]
       cs_avg = exp["metrics"]["cs_avg"]
+      gs_avg = exp["metrics"]["gs_avg"]
       cls = exp['class'] #1 if exp['class']=="1" else -1
       if int(ind) in exp_to_validate:
-          X_val.append([ge, le, mod, bc, cs, bc_avg, cs_avg])
+          X_val.append([ge, le, mod, bc, cs, bc_avg, cs_avg, gs_avg])
           y_val.append(int(cls))
       else:
-          X.append([ge, le, mod, bc, cs, bc_avg, cs_avg])
+          X.append([ge, le, mod, bc, cs, bc_avg, cs_avg, gs_avg])
           y.append(int(cls))
           
   return X, X_val, y, y_val

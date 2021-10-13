@@ -4,7 +4,7 @@ from constants import atlas_switcher, correlation_switcher
 from data import generate_examples_list
 from ml import calculate_statistical_features, separate_cross_validation, execute_logreg_model, execute_svm_model
 
-folder_list = ["dataset1", "dataset2", "dataset3"]
+folder_list = ["dataset1", "dataset2", "dataset3", "datasets"]
 for folder_path in folder_list:
     name = 'res-cross-validation-' + folder_path + '.txt'
     res=open(name,'w')
@@ -13,7 +13,7 @@ for folder_path in folder_list:
     folder_path = folder_path + '/'
     atlas_id_list = [1,2,3,4,6,8,9]
     correlation_list = ["Pearson Correlation and Fisher Normalization", "Pearson Correlation"]
-    thresh_list = [0.21, 0.30, 0.50]
+    thresh_list = [0.10, 0.20, 0.30, 0.50]
     binarize_coef_list = [0.1, 0.3, 0.5, 0.7]
 
     ### ATLAS CROSS VALIDATION FISHER
