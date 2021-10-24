@@ -52,7 +52,7 @@ def calculate_statistical_features(exp_list):
           cs_values = nx.clustering(exp["graph"])
           exp["metrics"]["cs"] =  get_safe_value(max(cs_values, key=cs_values.get))
           exp["metrics"]["cs_avg"] = get_safe_value(round(np.average(list(cs_values.values())), 5))
-          exp["metrics"]["gs_avg"] = exp["gs"]
+          exp["metrics"]["gs_avg"] = round(exp["gs"], 5)
           try:
               c = nx_comm.greedy_modularity_communities(exp["graph"])
               exp["metrics"]["mod"] = get_safe_value(round(nx_comm.modularity(exp["graph"], c), 5))
@@ -63,7 +63,7 @@ def calculate_statistical_features(exp_list):
 
 
 #Separate Training and Validation datasets
-def separate_training_validation(exp_list):  
+def separate_training_validation(exp_list, feature_selection_id):  
   X = []
   X_val = []
   y = []
@@ -72,7 +72,8 @@ def separate_training_validation(exp_list):
   random.shuffle(exp_list)
   ta = time.time()
   file_list_len = len(exp_list)
-  exp_to_validate = range(118, 148)
+  #exp_to_validate = range(118, 148)
+  exp_to_validate = range(15, 20)
   for ind, exp in enumerate(exp_list):
       print("\r{}/{}/{:2f}s".format(ind, file_list_len, time.time()-ta), end='', flush=True)
       ge = exp["metrics"]["ge"]
@@ -83,19 +84,36 @@ def separate_training_validation(exp_list):
       cs = exp["metrics"]["cs"]
       cs_avg = exp["metrics"]["cs_avg"]
       gs_avg = exp["metrics"]["gs_avg"]
+      sex = exp["sex"]
+      age = exp["age"]
       cls = exp['class'] #1 if exp['class']=="1" else -1
+      
+      #default features, feature_selection_id = 0
+      feature_list = [ge, le, mod, bc_avg, cs_avg]
+        
+      if (feature_selection_id == 1): 
+        feature_list.append(gs_avg)
+      elif (feature_selection_id == 2): 
+        feature_list.append(sex)
+        feature_list.append(age)
+      elif (feature_selection_id == 3):
+        feature_list.append(gs_avg)
+        feature_list.append(sex)
+        feature_list.append(age)
+        
       if int(ind) in exp_to_validate:
-          X_val.append([ge, le, mod, bc, cs, bc_avg, cs_avg, gs_avg])
+          #X_val.append([ge, le, mod, bc, cs, bc_avg, cs_avg, gs_avg])
+          X_val.append(feature_list)
           y_val.append(int(cls))
       else:
-          X.append([ge, le, mod, bc, cs, bc_avg, cs_avg, gs_avg])
+          X.append(feature_list)
           y.append(int(cls))
-          
+
   return X, X_val, y, y_val
 
 
 #Separate for cross validation
-def separate_cross_validation(exp_list):  
+def separate_cross_validation(exp_list, feature_selection_id):  
   train = []
   label = []
   random.seed(10)
@@ -111,8 +129,25 @@ def separate_cross_validation(exp_list):
       bc_avg = exp["metrics"]["bc_avg"]
       cs = exp["metrics"]["cs"]
       cs_avg = exp["metrics"]["cs_avg"]
+      gs_avg = exp["metrics"]["gs_avg"]
+      sex = exp["sex"]
+      age = exp["age"]
       cls = exp['class'] #1 if exp['class']=="1" else -1
-      train.append([ge, le, mod, bc, cs, bc_avg, cs_avg])
+
+      #default features, feature_selection_id = 0
+      feature_list = [ge, le, mod, bc_avg, cs_avg]
+        
+      if (feature_selection_id == 1): 
+        feature_list.append(gs_avg)
+      elif (feature_selection_id == 2): 
+        feature_list.append(sex)
+        feature_list.append(age)
+      elif (feature_selection_id == 3):
+        feature_list.append(gs_avg)
+        feature_list.append(sex)
+        feature_list.append(age)
+
+      train.append(feature_list)
       label.append(int(cls))
           
   return train, label

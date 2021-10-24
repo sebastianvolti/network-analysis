@@ -19,6 +19,18 @@ def load_roi(file_name):
   df_rois = pd.DataFrame(data)
   return df_rois
 
+#load extra info por subjects
+def load_extra_info():
+  extra_info = pd.read_csv('extra-info/info.csv')  
+  extra_info[['Age', 'Sex']] = extra_info[['Age', 'Sex']].apply(lambda x:  round((x - x.min()) / (x.max() - x.min()), 5))
+  extra_info_map = {}
+  for i , row in extra_info.iterrows():
+    subject_id = extra_info.at[i,'ID']
+    sex = extra_info.at[i,'Sex']
+    age = extra_info.at[i,'Age']
+    extra_info_map[subject_id] = {"sex": sex, "age": age}
+  return extra_info_map
+
 #extract global signal from roi dataframe
 def select_global_signal(df_rois):
   selected_atlas = atlas_switcher.get(7, "Invalid Atlas")
@@ -133,7 +145,7 @@ def nodal_eff(g):
 
 
 #Generate example instance for each ROI in path folder
-def generate_examples_list(folder_path, atlas_id, correlation, thresh, binarize_coef):
+def generate_examples_list(folder_path, atlas_id, correlation, thresh, binarize_coef, extra_info = {}):
   example_list = []
   file_list = os.listdir(folder_path)
   file_list_len = len(file_list)
@@ -155,5 +167,11 @@ def generate_examples_list(folder_path, atlas_id, correlation, thresh, binarize_
         correlation_matrix = {}
     graph = convert_matrix_to_networkx(correlation_matrix, correlation, thresh, binarize_coef)
     experiment = {"id": dt[2], "class": dt[1], 'exp': dt[0], 'graph': graph, 'gs': global_signal_avg}
+    
+    if (extra_info) :
+      subject_id = file_name.split('_')[1].split(".")[0]
+      experiment["age"] = extra_info[subject_id]["age"]
+      experiment["sex"] = extra_info[subject_id]["sex"]
+
     example_list.append(experiment)
   return example_list
