@@ -4,7 +4,8 @@ from constants import atlas_switcher, correlation_switcher
 from data import generate_examples_list, load_extra_info
 from ml import calculate_statistical_features, separate_cross_validation, execute_logreg_model, execute_svm_model
 
-folder_list = ["dataset1", "dataset2", "dataset3", "datasets"]
+folder_list = ["dataset_all_clinics"]
+#folder_list = ["dataset4"]
 for folder_path in folder_list:
     name = 'res-cross-validation-' + folder_path + '.txt'
     res=open(name,'w')
@@ -15,7 +16,7 @@ for folder_path in folder_list:
     correlation_list = ["Pearson Correlation and Fisher Normalization", "Pearson Correlation"]
     thresh_list = [0.10, 0.20, 0.30, 0.50]
     binarize_coef_list = [0.1, 0.3, 0.5, 0.7]
-    feature_selection_list = [0, 1, 2, 3]
+    feature_selection_list = [0, 2, 3]
 
     ### ATLAS CROSS VALIDATION FISHER
     res.write('Validación cruzada { atlas_id, fisher }: \n')
@@ -231,7 +232,7 @@ for folder_path in folder_list:
         res.write("\tF1:{} \n".format(res_f1))
         res.write('\n')
     
-     ### FEATUES CROSS VALIDATION
+    ### FEATUES CROSS VALIDATION
     res.write('Validación cruzada { feature_selection_id }: \n')
     res.write('\n')
     for feature_selection_id in feature_selection_list:
