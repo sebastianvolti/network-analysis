@@ -1,6 +1,7 @@
 import time
 import math
 import numpy as np
+import pandas as pd
 import networkx as nx 
 import networkx.algorithms.community as nx_comm
 from sklearn import svm, metrics
@@ -10,6 +11,16 @@ from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
+from sklearn import model_selection
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder
+import stellargraph as sg
+from stellargraph.mapper import PaddedGraphGenerator
+from stellargraph.layer import GCNSupervisedGraphClassification
+from tensorflow.keras import Model
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.losses import binary_crossentropy, categorical_crossentropy
 import random
 
 def stat(name, y, y_pred, n=0):
@@ -61,6 +72,26 @@ def calculate_statistical_features(exp_list):
               exp["metrics"]["mod"] = 0
   return exp_list
 
+#Statistic Analisys
+def calculate_statistical_features_gcn(exp_list):
+  ta = time.time()
+  file_list_len = len(exp_list)
+  for ind, exp in enumerate(exp_list):
+      print("\r{}/{}/{:2f}s".format(ind, file_list_len, time.time()-ta), end='', flush=True)
+      ta = time.time()
+
+      graph = exp["graph"]
+      bc = nx.betweenness_centrality(graph)
+      cs = nx.clustering(graph)
+      degrees = nx.degree(graph)
+      degree_values = {k: v for k, v in degrees}
+
+      for node in graph.nodes():
+        graph.nodes[node]['feature'] = [bc[node], cs[node], degree_values[node]]
+
+      exp["graph"] = graph
+
+  return exp_list
 
 #Separate Training and Validation datasets
 def separate_training_validation(exp_list, feature_selection_id):  
@@ -100,7 +131,7 @@ def separate_training_validation(exp_list, feature_selection_id):
         feature_list.append(gs_avg)
         feature_list.append(sex)
         feature_list.append(age)
-        
+
       if int(ind) in exp_to_validate:
           #X_val.append([ge, le, mod, bc, cs, bc_avg, cs_avg, gs_avg])
           X_val.append(feature_list)
@@ -110,7 +141,6 @@ def separate_training_validation(exp_list, feature_selection_id):
           y.append(int(cls))
 
   return X, X_val, y, y_val
-
 
 #Separate for cross validation
 def separate_cross_validation(exp_list, feature_selection_id):  
@@ -152,19 +182,100 @@ def separate_cross_validation(exp_list, feature_selection_id):
           
   return train, label
 
-
 def get_safe_value(value):
   if (math.isnan(value)):
     return 0
   else:
     return value
 
+def generate_stellar_graph(exp_list):
+  graphs = []
+  graphs_labels = []
+  ta = time.time()
+  for ind, g in enumerate(exp_list):
+      print("\r{}/{}/{:2f}s".format(ind, len(exp_list), time.time()-ta), end='', flush=True)
+      sg_g = sg.StellarGraph.from_networkx(g['graph'], node_features="feature")
+      graphs.append(sg_g)
+      graphs_labels.append(1 if g["class"] == "1" else -1)
+  
+  graph_labels = pd.Series(graphs_labels, name="label")
+  graph_labels = pd.get_dummies(graph_labels, drop_first=True)
+  generator = PaddedGraphGenerator(graphs=graphs)
 
-#Execute ML models
+  return graphs, graph_labels, generator
+
+def create_graph_classification_model(generator):
+    gc_model = GCNSupervisedGraphClassification(
+        layer_sizes=[64, 64],
+        activations=["relu", "relu"],
+        generator=generator,
+        dropout=0.5,
+    )
+    x_inp, x_out = gc_model.in_out_tensors()
+    predictions = Dense(units=32, activation="relu")(x_out)
+    predictions = Dense(units=16, activation="relu")(predictions)
+    predictions = Dense(units=1, activation="sigmoid")(predictions)
+
+    # Let's create the Keras model and prepare it for training
+    model = Model(inputs=x_inp, outputs=predictions)
+    model.compile(optimizer=Adam(0.005), loss=binary_crossentropy, metrics=["acc"])
+
+    return model, generator
+
+def train_fold(model, train_gen, test_gen, epochs):
+    es = EarlyStopping(
+        monitor="val_loss", min_delta=0, patience=25, restore_best_weights=True
+    )
+    history = model.fit(
+        train_gen, epochs=epochs, validation_data=test_gen, verbose=0, callbacks=[es],
+    )
+    # calculate performance on the test data and return along with history
+    test_metrics = model.evaluate(test_gen, verbose=0)
+    test_acc = test_metrics[model.metrics_names.index("acc")]
+
+    return history, test_acc
+
+def get_generators(train_index, test_index, graph_labels, generator, batch_size):
+    train_gen = generator.flow(
+        train_index, targets=graph_labels.iloc[train_index].values, batch_size=batch_size
+    )
+    test_gen = generator.flow(
+        test_index, targets=graph_labels.iloc[test_index].values, batch_size=batch_size
+    )
+
+    return train_gen, test_gen
+
+def train_gcn_model(folds, n_repeats, graph_labels, epochs, generator):
+    test_accs = []
+    stratified_folds = model_selection.RepeatedStratifiedKFold(
+        n_splits=folds, n_repeats=n_repeats
+    ).split(graph_labels, graph_labels)
+    for i, (train_index, test_index) in enumerate(stratified_folds):
+        print(f"Training and evaluating on fold {i+1} out of {folds * n_repeats}...")
+        train_gen, test_gen = get_generators(
+            train_index, test_index, graph_labels, generator, batch_size=16
+        )
+        model, generator = create_graph_classification_model(generator)
+        history, acc = train_fold(model, train_gen, test_gen, epochs)
+        test_accs.append(acc)
+
+    print(
+        f"Accuracy over all folds mean: {np.mean(test_accs)*100:.3}% and std: {np.std(test_accs)*100:.2}%"
+    )
+
+    return model, generator
+  
+#Execute GCN model
+def execute_gcn_model(model, generator):
+    pred = model.predict(generator.flow(range(10)))
+    np.count_nonzero(pred != pred[0])
+    print(pred)
+
+#Execute LR model
 def execute_logreg_model(X, y, X_val, y_val):  
   return model_exec("Log Reg",X, y, X_val, y_val, LogisticRegression(max_iter = 500))
 
-#Execute ML models
+#Execute SVM model
 def execute_svm_model(X, y, X_val, y_val):  
   hyperparams = {'C': 100, 'gamma': 0.1, 'kernel': 'rbf'}
   svm_model = svm.SVC(C=hyperparams['C'], gamma=hyperparams['gamma'], kernel=hyperparams['kernel'])
