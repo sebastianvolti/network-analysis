@@ -5,10 +5,11 @@ from data import generate_examples_list, load_extra_info
 from ml import calculate_statistical_features, separate_cross_validation, execute_logreg_model, execute_svm_model, execute_svm_linear_model, execute_knn_model, calculate_statistical_features_gcn, execute_nb_model, execute_rf_model, generate_stellar_graph, create_graph_classification_model, train_gcn_model, execute_gcn_model, select_best_features, init_results_map, process_results_map
 
 #folder_list = ["dataset_all_clinics"]
+
 folder_list = ["dataset4"]
 for folder_path in folder_list:
-    name = 'res-cross-val-' + folder_path + '.txt'
-    res=open(name,'w')
+    name_txt = 'cv-' + folder_path + '.txt'
+    output =open(name_txt,'w')
     #define config params
     folds = KFold(n_splits=3)
     folder_path = folder_path + '/'
@@ -22,8 +23,8 @@ for folder_path in folder_list:
     model_type = ["SVM","SVM_LINEAR","LR","RF","NB","KNN","GCN","ALL"]
 
     ### ATLAS CROSS VALIDATION PEARSON
-    res.write('Validación cruzada { atlas_id, pearson }: \n')
-    res.write('\n')
+    output.write('Validación cruzada { atlas_id, pearson }: \n')
+    output.write('\n')
     for atlas_id in atlas_id_list:
 
         #fixed params
@@ -124,24 +125,25 @@ for folder_path in folder_list:
         res_recall = np.average(results_recall)
         res_f1 = np.average(results_f1)
 
-        res.write("Resultados atlas_id={}:\n".format(atlas_id))
-        res.write("\tAccuracy:{} ".format(res_accuracy))
-        res.write("\tPrecision:{} ".format(res_precision))
-        res.write("\tRecall:{} ".format(res_recall))
-        res.write("\tF1:{} \n".format(res_f1))
-        res.write('\n')
+        output.write("Resultados atlas_id={}:\n".format(atlas_id))
+        output.write("\tAccuracy:{} ".format(res_accuracy))
+        output.write("\tPrecision:{} ".format(res_precision))
+        output.write("\tRecall:{} ".format(res_recall))
+        output.write("\tF1:{} \n".format(res_f1))
+        output.write('\n')
 
         exp_list = calculate_statistical_features_gcn(example_list)
         graphs, graphs_labels, generator = generate_stellar_graph(exp_list)
         model, generator, test_accs = train_gcn_model(folds, n_repeats, graphs_labels, epochs, generator)
-        res.write("Resultados atlas_id gcn={}:\n".format(atlas_id))
-        res.write("\tAccuracy mean:{} ".format(np.mean(test_accs)*100))
-        res.write("\tAccuracy std:{} ".format(np.std(test_accs)*100))
-        res.write('\n')
-  
+        output.write("Resultados atlas_id gcn={}:\n".format(atlas_id))
+        output.write("\tAccuracy mean:{} ".format(np.mean(test_accs)*100))
+        output.write("\tAccuracy std:{} ".format(np.std(test_accs)*100))
+        output.write('\n')
+    
+    
     ### ATLAS CROSS VALIDATION FISHER
-    res.write('Validación cruzada { atlas_id, fisher }: \n')
-    res.write('\n')
+    output.write('Validación cruzada { atlas_id, fisher }: \n')
+    output.write('\n')
     for atlas_id in atlas_id_list:
 
         #fixed params
@@ -242,24 +244,24 @@ for folder_path in folder_list:
         res_recall = np.average(results_recall)
         res_f1 = np.average(results_f1)
 
-        res.write("Resultados atlas_id={}:\n".format(atlas_id))
-        res.write("\tAccuracy:{} ".format(res_accuracy))
-        res.write("\tPrecision:{} ".format(res_precision))
-        res.write("\tRecall:{} ".format(res_recall))
-        res.write("\tF1:{} \n".format(res_f1))
-        res.write('\n')
+        output.write("Resultados atlas_id={}:\n".format(atlas_id))
+        output.write("\tAccuracy:{} ".format(res_accuracy))
+        output.write("\tPrecision:{} ".format(res_precision))
+        output.write("\tRecall:{} ".format(res_recall))
+        output.write("\tF1:{} \n".format(res_f1))
+        output.write('\n')
 
         exp_list = calculate_statistical_features_gcn(example_list)
         graphs, graphs_labels, generator = generate_stellar_graph(exp_list)
         model, generator, test_accs = train_gcn_model(folds, n_repeats, graphs_labels, epochs, generator)
-        res.write("Resultados atlas_id gcn={}:\n".format(atlas_id))
-        res.write("\tAccuracy mean:{} ".format(np.mean(test_accs)*100))
-        res.write("\tAccuracy std:{} ".format(np.std(test_accs)*100))
-        res.write('\n')
+        output.write("Resultados atlas_id gcn={}:\n".format(atlas_id))
+        output.write("\tAccuracy mean:{} ".format(np.mean(test_accs)*100))
+        output.write("\tAccuracy std:{} ".format(np.std(test_accs)*100))
+        output.write('\n')
 
     ### BINARIZE PEARSON COEF CROSS VALIDATION
-    res.write('Validación cruzada { binarize_coef }: \n')
-    res.write('\n')
+    output.write('Validación cruzada { binarize_coef }: \n')
+    output.write('\n')
     for binarize_coef in binarize_coef_list:
 
         #fixed params
@@ -360,24 +362,24 @@ for folder_path in folder_list:
         res_recall = np.average(results_recall)
         res_f1 = np.average(results_f1)
 
-        res.write("Resultados binarize_coef={}:\n".format(binarize_coef))
-        res.write("\tAccuracy:{} ".format(res_accuracy))
-        res.write("\tPrecision:{} ".format(res_precision))
-        res.write("\tRecall:{} ".format(res_recall))
-        res.write("\tF1:{} \n".format(res_f1))
-        res.write('\n')
+        output.write("Resultados binarize_coef={}:\n".format(binarize_coef))
+        output.write("\tAccuracy:{} ".format(res_accuracy))
+        output.write("\tPrecision:{} ".format(res_precision))
+        output.write("\tRecall:{} ".format(res_recall))
+        output.write("\tF1:{} \n".format(res_f1))
+        output.write('\n')
 
         exp_list = calculate_statistical_features_gcn(example_list)
         graphs, graphs_labels, generator = generate_stellar_graph(exp_list)
         model, generator, test_accs = train_gcn_model(folds, n_repeats, graphs_labels, epochs, generator)
-        res.write("Resultados binarize_coef gcn={}:\n".format(binarize_coef))
-        res.write("\tAccuracy mean:{} ".format(np.mean(test_accs)*100))
-        res.write("\tAccuracy std:{} ".format(np.std(test_accs)*100))
-        res.write('\n')
+        output.write("Resultados binarize_coef gcn={}:\n".format(binarize_coef))
+        output.write("\tAccuracy mean:{} ".format(np.mean(test_accs)*100))
+        output.write("\tAccuracy std:{} ".format(np.std(test_accs)*100))
+        output.write('\n')
   
     ### THRESH CROSS VALIDATION
-    res.write('Validación cruzada { thresh }: \n')
-    res.write('\n')
+    output.write('Validación cruzada { thresh }: \n')
+    output.write('\n')
     for thresh in thresh_list:
 
         #fixed params
@@ -478,24 +480,24 @@ for folder_path in folder_list:
         res_recall = np.average(results_recall)
         res_f1 = np.average(results_f1)
 
-        res.write("Resultados thresh={}:\n".format(thresh))
-        res.write("\tAccuracy:{} ".format(res_accuracy))
-        res.write("\tPrecision:{} ".format(res_precision))
-        res.write("\tRecall:{} ".format(res_recall))
-        res.write("\tF1:{} \n".format(res_f1))
-        res.write('\n')
+        output.write("Resultados thresh={}:\n".format(thresh))
+        output.write("\tAccuracy:{} ".format(res_accuracy))
+        output.write("\tPrecision:{} ".format(res_precision))
+        output.write("\tRecall:{} ".format(res_recall))
+        output.write("\tF1:{} \n".format(res_f1))
+        output.write('\n')
 
         exp_list = calculate_statistical_features_gcn(example_list)
         graphs, graphs_labels, generator = generate_stellar_graph(exp_list)
         model, generator, test_accs = train_gcn_model(folds, n_repeats, graphs_labels, epochs, generator)
-        res.write("Resultados thresh gcn={}:\n".format(thresh))
-        res.write("\tAccuracy mean:{} ".format(np.mean(test_accs)*100))
-        res.write("\tAccuracy std:{} ".format(np.std(test_accs)*100))
-        res.write('\n')
+        output.write("Resultados thresh gcn={}:\n".format(thresh))
+        output.write("\tAccuracy mean:{} ".format(np.mean(test_accs)*100))
+        output.write("\tAccuracy std:{} ".format(np.std(test_accs)*100))
+        output.write('\n')
 
     ### FEATURES CROSS VALIDATION
-    res.write('Validación cruzada { feature_selection_id }: \n')
-    res.write('\n')
+    output.write('Validación cruzada { feature_selection_id }: \n')
+    output.write('\n')
     for feature_selection_id in feature_selection_list:
 
         #fixed params
@@ -596,16 +598,16 @@ for folder_path in folder_list:
         res_recall = np.average(results_recall)
         res_f1 = np.average(results_f1)
 
-        res.write("Resultados feature_selection_id={}:\n".format(feature_selection_id))
-        res.write("\tAccuracy:{} ".format(res_accuracy))
-        res.write("\tPrecision:{} ".format(res_precision))
-        res.write("\tRecall:{} ".format(res_recall))
-        res.write("\tF1:{} \n".format(res_f1))
-        res.write('\n')
+        output.write("Resultados feature_selection_id={}:\n".format(feature_selection_id))
+        output.write("\tAccuracy:{} ".format(res_accuracy))
+        output.write("\tPrecision:{} ".format(res_precision))
+        output.write("\tRecall:{} ".format(res_recall))
+        output.write("\tF1:{} \n".format(res_f1))
+        output.write('\n')
    
     ### BEST FEATURES CROSS VALIDATION
-    res.write('Validación cruzada { best features }: \n')
-    res.write('\n')
+    output.write('Validación cruzada { best features }: \n')
+    output.write('\n')
     for best_features_quantity_id in best_features_quantity:
 
         #fixed params
@@ -706,16 +708,16 @@ for folder_path in folder_list:
         res_recall = np.average(results_recall)
         res_f1 = np.average(results_f1)
 
-        res.write("Resultados best features quantity={}:\n".format(best_features_quantity_id))
-        res.write("\tAccuracy:{} ".format(res_accuracy))
-        res.write("\tPrecision:{} ".format(res_precision))
-        res.write("\tRecall:{} ".format(res_recall))
-        res.write("\tF1:{} \n".format(res_f1))
-        res.write('\n')
+        output.write("Resultados best features quantity={}:\n".format(best_features_quantity_id))
+        output.write("\tAccuracy:{} ".format(res_accuracy))
+        output.write("\tPrecision:{} ".format(res_precision))
+        output.write("\tRecall:{} ".format(res_recall))
+        output.write("\tF1:{} \n".format(res_f1))
+        output.write('\n')
   
     ### MODEL CROSS VALIDATION
-    res.write('Validación cruzada { model }: \n')
-    res.write('\n')
+    output.write('Validación cruzada { model }: \n')
+    output.write('\n')
     for model_type_id in model_type:
 
         #fixed params
@@ -742,11 +744,11 @@ for folder_path in folder_list:
                 exp_list = calculate_statistical_features_gcn(example_list)
                 graphs, graphs_labels, generator = generate_stellar_graph(exp_list)
                 model, generator, test_accs = train_gcn_model(folds, n_repeats, graphs_labels, epochs, generator)
-                res.write("Resultados model_type={}, ".format(model_type_id))
-                res.write("epochs={}:\n".format(epochs))
-                res.write("\tAccuracy mean:{} ".format(np.mean(test_accs)*100))
-                res.write("\tAccuracy std:{} ".format(np.std(test_accs)*100))
-                res.write('\n')
+                output.write("Resultados model_type={}, ".format(model_type_id))
+                output.write("epochs={}:\n".format(epochs))
+                output.write("\tAccuracy mean:{} ".format(np.mean(test_accs)*100))
+                output.write("\tAccuracy std:{} ".format(np.std(test_accs)*100))
+                output.write('\n')
 
         else:
         
@@ -831,14 +833,15 @@ for folder_path in folder_list:
             res_recall = np.average(results_recall)
             res_f1 = np.average(results_f1)
 
-            res.write("Resultados model_type={}:\n".format(model_type_id))
-            res.write("\tAccuracy:{} ".format(res_accuracy))
-            res.write("\tPrecision:{} ".format(res_precision))
-            res.write("\tRecall:{} ".format(res_recall))
-            res.write("\tF1:{} \n".format(res_f1))
-            res.write('\n')
+            output.write("Resultados model_type={}:\n".format(model_type_id))
+            output.write("\tAccuracy:{} ".format(res_accuracy))
+            output.write("\tPrecision:{} ".format(res_precision))
+            output.write("\tRecall:{} ".format(res_recall))
+            output.write("\tF1:{} \n".format(res_f1))
+            output.write('\n')
     
 
+    output.close()
 
 
 
