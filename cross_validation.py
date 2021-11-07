@@ -4,15 +4,15 @@ from constants import atlas_switcher, correlation_switcher
 from data import generate_examples_list, load_extra_info
 from ml import calculate_statistical_features, separate_cross_validation, execute_logreg_model, execute_svm_model
 
+#folder_list = ["dataset_all_clinics"]
 folder_list = ["dataset_all_clinics"]
-#folder_list = ["dataset4"]
 for folder_path in folder_list:
-    name = 'res-cross-validation-' + folder_path + '.txt'
+    name = 'res-cross-val-' + folder_path + '.txt'
     res=open(name,'w')
     #define config params
     folds = KFold(n_splits=3)
     folder_path = folder_path + '/'
-    atlas_id_list = [1]
+    atlas_id_list = [1,2,3,4,6]
     correlation_list = ["Pearson Correlation and Fisher Normalization", "Pearson Correlation"]
     thresh_list = [0.10, 0.20, 0.30, 0.50]
     binarize_coef_list = [0.1, 0.3, 0.5, 0.7]
@@ -28,7 +28,7 @@ for folder_path in folder_list:
         thresh = 0.21
         binarize_coef = 0.3
         feature_selection_id = 0
-
+        
         #preprocess
         extra_info = load_extra_info()
         example_list = generate_examples_list(folder_path, atlas_id, correlation, thresh, binarize_coef, extra_info)

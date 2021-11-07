@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import networkx as nx 
 import networkx.algorithms.community as nx_comm
-from sklearn import svm, metrics
+from sklearn import svm, naive_bayes, neighbors, metrics
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
@@ -21,7 +21,31 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.losses import binary_crossentropy, categorical_crossentropy
+from mrmr import mrmr_classif
+from keras import backend as K
+#import xgboost
+#from xgboost import XGBClassifier
+#import lightgbm
+#from lightgbm import LGBMClassifier
 import random
+
+
+def recall_m(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    recall = true_positives / (possible_positives + K.epsilon())
+    return recall
+
+def precision_m(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = true_positives / (predicted_positives + K.epsilon())
+    return precision
+
+def f1_m(y_true, y_pred):
+    precision = precision_m(y_true, y_pred)
+    recall = recall_m(y_true, y_pred)
+    return 2*((precision*recall)/(precision+recall+K.epsilon()))
 
 def stat(name, y, y_pred, n=0):
     print("{}-{}".format(name, n), end='')
@@ -32,17 +56,19 @@ def stat(name, y, y_pred, n=0):
     return metrics.accuracy_score(y, y_pred), metrics.precision_score(y, y_pred), metrics.recall_score(y, y_pred), metrics.f1_score(y, y_pred)
 
 
-def model_exec(name, X_tr, y_tr, X_te, y_te, model):
+def model_exec(name, X_tr, y_tr, X_te, y_te, model, results_map):
     stat_pipe = []
     start = time.time()
     model.fit(X_tr, y_tr)
     middle = time.time()
     y_pred = model.predict(X_te)
+    for index in range(len(y_pred)): 
+      results_map[index]["predictions"].append(y_pred[index])
     stat_pipe.append((name, y_te, y_pred))
     acc, pre, rec, f1 = stat(name, y_te, y_pred)
     end = time.time()
     print("{}: tr {:.4f}s, te {:.4f}s".format(name,middle-start, end-middle))
-    return acc, pre, rec, f1
+    return acc, pre, rec, f1, results_map
 
 #Statistic Analisys
 def calculate_statistical_features(exp_list):
@@ -74,7 +100,9 @@ def calculate_statistical_features(exp_list):
 
 #Statistic Analisys
 def calculate_statistical_features_gcn(exp_list):
-  ta = time.time()
+  ta = time.time()  
+  random.seed(10)
+  random.shuffle(exp_list)
   file_list_len = len(exp_list)
   for ind, exp in enumerate(exp_list):
       print("\r{}/{}/{:2f}s".format(ind, file_list_len, time.time()-ta), end='', flush=True)
@@ -85,13 +113,37 @@ def calculate_statistical_features_gcn(exp_list):
       cs = nx.clustering(graph)
       degrees = nx.degree(graph)
       degree_values = {k: v for k, v in degrees}
-
+      cliques = nx.node_clique_number(graph)
+      triangles = nx.triangles(graph)
+      sq_cs = nx.square_clustering(graph)
+    
       for node in graph.nodes():
-        graph.nodes[node]['feature'] = [bc[node], cs[node], degree_values[node]]
+        graph.nodes[node]['feature'] = [bc[node], cs[node], sq_cs[node], degree_values[node], cliques[node], triangles[node]]
 
       exp["graph"] = graph
 
   return exp_list
+
+#Select Best Features with MRMR
+def select_best_features(X, X_val, y, y_val, quantity):
+
+  X_df = pd.DataFrame(X)
+  y_df = pd.Series(y)
+
+  # use mrmr classification
+  selected_features = mrmr_classif(X_df, y_df, K = quantity)
+
+  X_selected = []
+  for features in X:
+      new_features = [features[i] for i in selected_features]
+      X_selected.append(new_features) 
+  
+  X_val_selected = []
+  for features in X_val:
+      new_features = [features[i] for i in selected_features]
+      X_val_selected.append(new_features) 
+
+  return X_selected, X_val_selected
 
 #Separate Training and Validation datasets
 def separate_training_validation(exp_list, feature_selection_id):  
@@ -99,12 +151,73 @@ def separate_training_validation(exp_list, feature_selection_id):
   X_val = []
   y = []
   y_val = []
+  clinica_train = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+    6: 0,
+    7: 0,
+    8: 0,
+    9: 0,
+    10: 0,
+    11: 0,
+    12: 0,
+    13: 0,
+    14: 0,
+    15: 0,
+    16: 0,
+    17: 0,
+    18: 0,
+    19: 0,
+    20: 0,
+    21: 0,
+    22: 0,
+    23: 0,
+    24: 0,
+    25: 0,
+    26: 0,
+  }
+  clinica_val = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+    6: 0,
+    7: 0,
+    8: 0,
+    9: 0,
+    10: 0,
+    11: 0,
+    12: 0,
+    13: 0,
+    14: 0,
+    15: 0,
+    16: 0,
+    17: 0,
+    18: 0,
+    19: 0,
+    20: 0,
+    21: 0,
+    22: 0,
+    23: 0,
+    24: 0,
+    25: 0,
+    26: 0,
+  }
+  pos_neg = {
+    0: 0,
+    1: 0
+  }
   random.seed(10)
   random.shuffle(exp_list)
   ta = time.time()
   file_list_len = len(exp_list)
-  #exp_to_validate = range(118, 148)
-  exp_to_validate = range(15, 20)
+  val_init = int(len(exp_list)*0.8)
+  exp_to_validate = range(val_init, file_list_len)
+
   for ind, exp in enumerate(exp_list):
       print("\r{}/{}/{:2f}s".format(ind, file_list_len, time.time()-ta), end='', flush=True)
       ge = exp["metrics"]["ge"]
@@ -132,13 +245,28 @@ def separate_training_validation(exp_list, feature_selection_id):
         feature_list.append(sex)
         feature_list.append(age)
 
+
       if int(ind) in exp_to_validate:
-          #X_val.append([ge, le, mod, bc, cs, bc_avg, cs_avg, gs_avg])
           X_val.append(feature_list)
           y_val.append(int(cls))
+  
+          key = int(exp["exp"])
+          clinica_val[key]+=1
+
+          key_pos_neg = int(cls)
+          pos_neg[key_pos_neg]+=1
+
       else:
           X.append(feature_list)
           y.append(int(cls))
+          key = int(exp["exp"])
+          clinica_train[key]+=1
+      
+
+  #print(clinica_train)
+  #print(clinica_val)
+  #print(pos_neg)
+
 
   return X, X_val, y, y_val
 
@@ -196,8 +324,8 @@ def generate_stellar_graph(exp_list):
       print("\r{}/{}/{:2f}s".format(ind, len(exp_list), time.time()-ta), end='', flush=True)
       sg_g = sg.StellarGraph.from_networkx(g['graph'], node_features="feature")
       graphs.append(sg_g)
-      graphs_labels.append(1 if g["class"] == "1" else -1)
-  
+      graphs_labels.append(1 if g["class"] == 1 else 0)
+
   graph_labels = pd.Series(graphs_labels, name="label")
   graph_labels = pd.get_dummies(graph_labels, drop_first=True)
   generator = PaddedGraphGenerator(graphs=graphs)
@@ -218,7 +346,7 @@ def create_graph_classification_model(generator):
 
     # Let's create the Keras model and prepare it for training
     model = Model(inputs=x_inp, outputs=predictions)
-    model.compile(optimizer=Adam(0.005), loss=binary_crossentropy, metrics=["acc"])
+    model.compile(optimizer=Adam(0.005), loss=binary_crossentropy, metrics=["acc",f1_m,precision_m, recall_m])
 
     return model, generator
 
@@ -230,10 +358,9 @@ def train_fold(model, train_gen, test_gen, epochs):
         train_gen, epochs=epochs, validation_data=test_gen, verbose=0, callbacks=[es],
     )
     # calculate performance on the test data and return along with history
-    test_metrics = model.evaluate(test_gen, verbose=0)
-    test_acc = test_metrics[model.metrics_names.index("acc")]
+    loss, accuracy, f1_score, precision, recall = model.evaluate(test_gen, verbose=0)
 
-    return history, test_acc
+    return history, accuracy
 
 def get_generators(train_index, test_index, graph_labels, generator, batch_size):
     train_gen = generator.flow(
@@ -253,7 +380,7 @@ def train_gcn_model(folds, n_repeats, graph_labels, epochs, generator):
     for i, (train_index, test_index) in enumerate(stratified_folds):
         print(f"Training and evaluating on fold {i+1} out of {folds * n_repeats}...")
         train_gen, test_gen = get_generators(
-            train_index, test_index, graph_labels, generator, batch_size=16
+            train_index, test_index, graph_labels, generator, batch_size=4
         )
         model, generator = create_graph_classification_model(generator)
         history, acc = train_fold(model, train_gen, test_gen, epochs)
@@ -263,20 +390,95 @@ def train_gcn_model(folds, n_repeats, graph_labels, epochs, generator):
         f"Accuracy over all folds mean: {np.mean(test_accs)*100:.3}% and std: {np.std(test_accs)*100:.2}%"
     )
 
-    return model, generator
+    return model, generator, test_accs
   
 #Execute GCN model
-def execute_gcn_model(model, generator):
-    pred = model.predict(generator.flow(range(10)))
-    np.count_nonzero(pred != pred[0])
+def execute_gcn_model(model, generator, len_exp_list):
+
+    val_init = int(len_exp_list*0.8)
+    val_range = len_exp_list - val_init
+    exp_to_validate = range(val_init, len_exp_list)
+    pred = model.predict(generator.flow(exp_to_validate))
     print(pred)
 
+
 #Execute LR model
-def execute_logreg_model(X, y, X_val, y_val):  
-  return model_exec("Log Reg",X, y, X_val, y_val, LogisticRegression(max_iter = 500))
+def execute_logreg_model(X, y, X_val, y_val, results_map):  
+  return model_exec("Log Reg",X, y, X_val, y_val, LogisticRegression(max_iter = 500), results_map)
+
+def execute_rf_model(X, y, X_val, y_val, results_map):  
+  return model_exec("Random Forest",X, y, X_val, y_val, RandomForestClassifier(), results_map)
 
 #Execute SVM model
-def execute_svm_model(X, y, X_val, y_val):  
+def execute_svm_model(X, y, X_val, y_val, results_map):  
   hyperparams = {'C': 100, 'gamma': 0.1, 'kernel': 'rbf'}
   svm_model = svm.SVC(C=hyperparams['C'], gamma=hyperparams['gamma'], kernel=hyperparams['kernel'])
-  return model_exec("SVM Class",X, y, X_val, y_val, svm_model)
+  return model_exec("SVM Class",X, y, X_val, y_val, svm_model, results_map)
+
+#Execute SVM Linear model
+def execute_svm_linear_model(X, y, X_val, y_val, results_map):  
+  svm_model = svm.LinearSVC()
+  return model_exec("SVM Linear Class",X, y, X_val, y_val, svm_model, results_map)
+
+#Execute KNN model
+def execute_knn_model(X, y, X_val, y_val, results_map):  
+  knn_model = neighbors.KNeighborsClassifier()
+  return model_exec("KNN Class",X, y, X_val, y_val, knn_model, results_map)
+
+#Execute Naive Bayes model
+def execute_nb_model(X, y, X_val, y_val, results_map):  
+  nb_model = naive_bayes.GaussianNB()
+  return model_exec("NB Class",X, y, X_val, y_val, nb_model, results_map)
+
+#Execute XGB model
+#def execute_xgb_model(X, y, X_val, y_val, results_map):  
+#  xgb_model = XGBClassifier()
+#  return model_exec("XGB Class",X, y, X_val, y_val, xgb_model, results_map)
+
+#Execute LGBM model
+#def execute_lgbm_model(X, y, X_val, y_val, results_map):  
+#  lgbm_model = LGBMClassifier()
+#  return model_exec("LGBM Class",X, y, X_val, y_val, lgbm_model, results_map)
+
+
+
+def init_results_map(y_val):
+  results_map = {}
+  for index in range(len(y_val)):
+    results_map[index] = {
+        "real_tag": y_val[index],
+        "predictions": []
+    }
+
+  return results_map
+
+def process_results(results_map):
+  contador_uno = 0
+  contador_cero = 0
+  for index in range(len(results_map)):
+    for pred in range(3):
+      value = results_map[index]["predictions"][pred]
+      if (value == 0):
+        contador_cero+=1
+      else:
+        contador_uno+=1
+
+      
+def process_results_map(results_map, name, y_val):
+  y_pred = []
+  for index in range(len(results_map)):
+    results_average = np.average(results_map[index]["predictions"])
+    if (results_average > 0.5):
+      results_map[index]["average"] = 1
+    else:
+      results_map[index]["average"] = 0  
+    y_pred.append(results_map[index]["average"])
+  
+  return calculate_final_results(name, y_val, y_pred)
+
+def calculate_final_results(name, y_val, y_pred):
+    stat_pipe = []
+    results = stat(name, y_val, y_pred)
+
+    return results
+      

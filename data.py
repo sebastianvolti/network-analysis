@@ -160,7 +160,7 @@ def generate_examples_list(folder_path, atlas_id, correlation, thresh, binarize_
       global_signal_avg = 0
       #global_signal = select_global_signal(df_rois)
       #global_signal_avg = np.average(global_signal)
-      selected_correlation = correlation_switcher.get(correlation, "Invalid Correlation")
+      #selected_correlation = correlation_switcher.get(correlation, "Invalid Correlation")
       if (correlation == "Pearson Correlation"):
           correlation_matrix = calculate_pearson_correlation(df_atlas)
       elif (correlation == "Pearson Correlation and Fisher Normalization"):
@@ -169,8 +169,8 @@ def generate_examples_list(folder_path, atlas_id, correlation, thresh, binarize_
           #Partial Correlation
           correlation_matrix = {}
       graph = convert_matrix_to_networkx(correlation_matrix, correlation, thresh, binarize_coef)
-      experiment = {"id": dt[2], "class": dt[1], 'exp': dt[0], 'graph': graph, 'gs': global_signal_avg}
-      
+      classification = int(dt[1]) % 2
+      experiment = {"id": dt[2], "class": classification, 'exp': dt[0], 'graph': graph, 'gs': global_signal_avg}
       if (extra_info) :
         subject_id = file_name.split('_')[1].split(".")[0]
         experiment["age"] = extra_info[subject_id]["age"]

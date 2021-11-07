@@ -14,7 +14,7 @@ atlas_switcher = {
         "start_range" : 212,
         "end_range" : 228
       },
-    4: {
+    4: { 
         "name" : "Craddock clustering",
         "start_range" : 228,
         "end_range" : 428
