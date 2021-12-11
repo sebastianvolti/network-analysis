@@ -23,10 +23,8 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.losses import binary_crossentropy, categorical_crossentropy
 from mrmr import mrmr_classif
 from keras import backend as K
-#import xgboost
-#from xgboost import XGBClassifier
-#import lightgbm
-#from lightgbm import LGBMClassifier
+import matplotlib.pyplot as plt
+
 import random
 
 
@@ -59,7 +57,22 @@ def stat(name, y, y_pred, n=0):
 def model_exec(name, X_tr, y_tr, X_te, y_te, model, results_map):
     stat_pipe = []
     start = time.time()
+
+    feature_names = ["ge", "le", "mod", "bc_avg", "cs_avg", "dg_avg", "clq_avg", "trn_avg", "sq_cs_avg","sex", "age"]
     model.fit(X_tr, y_tr)
+    std = []
+
+    #plot feature importances for random forest
+    
+    #importances = model.feature_importances_
+    #std = np.std([tree.feature_importances_ for tree in model.estimators_], axis=0)
+    #forest_importances = pd.Series(importances, index=feature_names)
+    #fig, ax = plt.subplots()
+    #forest_importances.plot.bar(yerr=std, ax=ax)
+    #ax.set_title("Feature importances")
+    #ax.set_ylabel("Mean decrease in impurity")
+    #fig.savefig(figure_name_img + "test", bbox_inches='tight', pad_inches=0)
+
     middle = time.time()
     y_pred = model.predict(X_te)
     for index in range(len(y_pred)): 
@@ -67,6 +80,9 @@ def model_exec(name, X_tr, y_tr, X_te, y_te, model, results_map):
     stat_pipe.append((name, y_te, y_pred))
     acc, pre, rec, f1 = stat(name, y_te, y_pred)
     end = time.time()
+
+   
+
     print("{}: tr {:.4f}s, te {:.4f}s".format(name,middle-start, end-middle))
     return acc, pre, rec, f1, results_map
 
@@ -90,6 +106,20 @@ def calculate_statistical_features(exp_list):
           exp["metrics"]["cs"] =  get_safe_value(max(cs_values, key=cs_values.get))
           exp["metrics"]["cs_avg"] = get_safe_value(round(np.average(list(cs_values.values())), 5))
           exp["metrics"]["gs_avg"] = round(exp["gs"], 5)
+
+          degrees = nx.degree(exp["graph"])
+          degree_values = {k: v for k, v in degrees}
+          cliques = nx.node_clique_number(exp["graph"])
+          triangles = nx.triangles(exp["graph"])
+          sq_cs = nx.square_clustering(exp["graph"])
+
+          exp["metrics"]["dg_avg"] = get_safe_value(round(np.average(list(degree_values.values())), 5))
+          exp["metrics"]["clq_avg"] = get_safe_value(round(np.average(list(cliques.values())), 5))
+          exp["metrics"]["trn_avg"] = get_safe_value(round(np.average(list(triangles.values())), 5))
+          exp["metrics"]["sq_cs_avg"] = get_safe_value(round(np.average(list(sq_cs.values())), 5))
+        
+
+
           try:
               c = nx_comm.greedy_modularity_communities(exp["graph"])
               exp["metrics"]["mod"] = get_safe_value(round(nx_comm.modularity(exp["graph"], c), 5))
@@ -230,7 +260,15 @@ def separate_training_validation(exp_list, feature_selection_id):
       gs_avg = exp["metrics"]["gs_avg"]
       sex = exp["sex"]
       age = exp["age"]
-      cls = exp['class'] #1 if exp['class']=="1" else -1
+
+      dg_avg = exp["metrics"]["dg_avg"]
+      clq_avg = exp["metrics"]["clq_avg"]
+      trn_avg = exp["metrics"]["trn_avg"]
+      sq_cs_avg = exp["metrics"]["sq_cs_avg"]
+
+      cls = exp['class']
+      
+
       
       #default features, feature_selection_id = 0
       feature_list = [ge, le, mod, bc_avg, cs_avg]
@@ -241,7 +279,10 @@ def separate_training_validation(exp_list, feature_selection_id):
         feature_list.append(sex)
         feature_list.append(age)
       elif (feature_selection_id == 3):
-        feature_list.append(gs_avg)
+        feature_list.append(dg_avg)
+        feature_list.append(clq_avg)
+        feature_list.append(trn_avg)
+        feature_list.append(sq_cs_avg)
         feature_list.append(sex)
         feature_list.append(age)
 
@@ -261,12 +302,6 @@ def separate_training_validation(exp_list, feature_selection_id):
           y.append(int(cls))
           key = int(exp["exp"])
           clinica_train[key]+=1
-      
-
-  #print(clinica_train)
-  #print(clinica_val)
-  #print(pos_neg)
-
 
   return X, X_val, y, y_val
 
@@ -394,7 +429,6 @@ def train_gcn_model(folds, n_repeats, graph_labels, epochs, generator):
   
 #Execute GCN model
 def execute_gcn_model(model, generator, len_exp_list):
-
     val_init = int(len_exp_list*0.8)
     val_range = len_exp_list - val_init
     exp_to_validate = range(val_init, len_exp_list)
@@ -429,17 +463,6 @@ def execute_knn_model(X, y, X_val, y_val, results_map):
 def execute_nb_model(X, y, X_val, y_val, results_map):  
   nb_model = naive_bayes.GaussianNB()
   return model_exec("NB Class",X, y, X_val, y_val, nb_model, results_map)
-
-#Execute XGB model
-#def execute_xgb_model(X, y, X_val, y_val, results_map):  
-#  xgb_model = XGBClassifier()
-#  return model_exec("XGB Class",X, y, X_val, y_val, xgb_model, results_map)
-
-#Execute LGBM model
-#def execute_lgbm_model(X, y, X_val, y_val, results_map):  
-#  lgbm_model = LGBMClassifier()
-#  return model_exec("LGBM Class",X, y, X_val, y_val, lgbm_model, results_map)
-
 
 
 def init_results_map(y_val):

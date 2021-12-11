@@ -6,9 +6,9 @@ from ml import calculate_statistical_features, separate_cross_validation, execut
 
 #folder_list = ["dataset_all_clinics"]
 
-folder_list = ["dataset4"]
+folder_list = ["dataset20"]
 for folder_path in folder_list:
-    name_txt = 'cv-' + folder_path + '.txt'
+    name_txt = 'crossval-' + folder_path + '.txt'
     output =open(name_txt,'w')
     #define config params
     folds = KFold(n_splits=3)
